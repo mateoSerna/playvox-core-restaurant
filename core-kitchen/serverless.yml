@@ -1,0 +1,129 @@
+service: core-kitchen
+frameworkVersion: '2'
+
+plugins:
+  - serverless-offline
+  - serverless-python-requirements
+
+custom:
+  allowedHeaders:
+    - Accept
+    - Content-Type
+    - Content-Length
+
+provider:
+  name: aws
+  runtime: python3.8
+  lambdaHashingVersion: 20201221
+  region: sa-east-1
+  stage: dev
+  memorySize: 128
+  timeout: 5
+  endpointType: regional
+  environment:
+    WAREHOUSE_API: https://qdqj07k5c5.execute-api.sa-east-1.amazonaws.com/${opt:stage, self:provider.stage}
+    ORDER_TABLE: ${self:service}-order-${opt:stage, self:provider.stage}
+  iam:
+    role:
+      statements:
+        - Effect: Allow
+          Action:
+            - dynamodb:Query
+            - dynamodb:PutItem
+            - dynamodb:DeleteItem
+          Resource:
+            - { "Fn::GetAtt": ["OrderTable", "Arn"] }
+
+functions:
+  create-order:
+    handler: api/create_order.lambda_handler
+    description: POST /order
+    events:
+      - http:
+          path: order
+          method: post
+          cors:
+            origin: "*"
+            headers: ${self:custom.allowedHeaders}
+  update-order:
+    handler: api/update_order.lambda_handler
+    description: PATCH /order
+    events:
+      - http:
+          path: order
+          method: patch
+          cors:
+            origin: "*"
+            headers: ${self:custom.allowedHeaders}
+  get-orders:
+    handler: api/get_orders.lambda_handler
+    description: GET /orders
+    events:
+      - http:
+          path: orders
+          method: get
+          cors:
+            origin: "*"
+            headers: ${self:custom.allowedHeaders}
+  get-order:
+    handler: api/get_order.lambda_handler
+    description: GET /order/{order_id}
+    events:
+      - http:
+          path: order/{order_id}
+          method: get
+          cors:
+            origin: "*"
+            headers: ${self:custom.allowedHeaders}
+  delete-order:
+    handler: api/delete_order.lambda_handler
+    description: DELETE /order/{order_id}
+    events:
+      - http:
+          path: order/{order_id}
+          method: delete
+          cors:
+            origin: "*"
+            headers: ${self:custom.allowedHeaders}
+
+resources:
+  Resources:
+    OrderTable:
+      Type: AWS::DynamoDB::Table
+      DeletionPolicy: Retain
+      Properties:
+        TableName: ${self:provider.environment.ORDER_TABLE}
+        AttributeDefinitions:
+          - AttributeName: order_id
+            AttributeType: S
+          - AttributeName: timestamp
+            AttributeType: N
+          - AttributeName: status
+            AttributeType: S
+        KeySchema:
+          - AttributeName: order_id
+            KeyType: HASH
+          - AttributeName: timestamp
+            KeyType: RANGE
+        ProvisionedThroughput:
+          ReadCapacityUnits: 1
+          WriteCapacityUnits: 1
+        GlobalSecondaryIndexes:
+          - IndexName: status-index
+            KeySchema:
+              - AttributeName: status
+                KeyType: HASH
+            Projection:
+              ProjectionType: ALL
+            ProvisionedThroughput:
+              ReadCapacityUnits: 1
+              WriteCapacityUnits: 1
+    GatewayResponseDefault4XX:
+      Type: AWS::ApiGateway::GatewayResponse
+      Properties:
+        ResponseParameters:
+          gatewayresponse.header.Access-Control-Allow-Origin: "'*'"
+          gatewayresponse.header.Access-Control-Allow-Headers: "'*'"
+        ResponseType: DEFAULT_4XX
+        RestApiId:
+          Ref: "ApiGatewayRestApi"

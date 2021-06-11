@@ -1,0 +1,11 @@
+{
+  "CoreIngredients": {
+    "description": "Auto imported from components/core-ingredients.vue"
+  },
+  "CoreNewIngredient": {
+    "description": "Auto imported from components/core-new-ingredient.vue"
+  },
+  "CoreOrders": {
+    "description": "Auto imported from components/core-orders.vue"
+  }
+}

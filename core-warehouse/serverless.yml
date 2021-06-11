@@ -1,0 +1,219 @@
+service: core-warehouse
+frameworkVersion: '2'
+
+plugins:
+  - serverless-offline
+  - serverless-python-requirements
+custom:
+  allowedHeaders:
+    - Accept
+    - Content-Type
+    - Content-Length
+
+provider:
+  name: aws
+  runtime: python3.8
+  lambdaHashingVersion: 20201221
+  region: sa-east-1
+  stage: dev
+  memorySize: 128
+  timeout: 5
+  endpointType: regional
+  environment:
+    INGREDIENT_TABLE: ${self:service}-ingredient-${opt:stage, self:provider.stage}
+    RECIPE_TABLE: ${self:service}-recipe-${opt:stage, self:provider.stage}
+  iam:
+    role:
+      statements:
+        - Effect: Allow
+          Action:
+            - dynamodb:Query
+            - dynamodb:PutItem
+            - dynamodb:DeleteItem
+          Resource:
+            - { "Fn::GetAtt": ["IngredientTable", "Arn"] }
+            - { "Fn::GetAtt": ["RecipeTable", "Arn"] }
+
+functions:
+  create-ingredient:
+    handler: api/ingredients/create_ingredient.lambda_handler
+    description: POST /ingredient
+    events:
+      - http:
+          path: ingredient
+          method: post
+          cors:
+            origin: "*"
+            headers: ${self:custom.allowedHeaders}
+  update-ingredient:
+    handler: api/ingredients/update_ingredient.lambda_handler
+    description: PATCH /ingredient
+    events:
+      - http:
+          path: ingredient
+          method: patch
+          cors:
+            origin: "*"
+            headers: ${self:custom.allowedHeaders}
+  get-ingredients:
+    handler: api/ingredients/get_ingredients.lambda_handler
+    description: GET /ingredients
+    events:
+      - http:
+          path: ingredients
+          method: get
+          cors:
+            origin: "*"
+            headers: ${self:custom.allowedHeaders}
+  get-ingredient:
+    handler: api/ingredients/get_ingredient.lambda_handler
+    description: GET /ingredient/{ingredient_id}
+    events:
+      - http:
+          path: ingredient/{ingredient_id}
+          method: get
+          cors:
+            origin: "*"
+            headers: ${self:custom.allowedHeaders}
+  delete-ingredient:
+    handler: api/ingredients/delete_ingredient.lambda_handler
+    description: DELETE /ingredient/{ingredient_id}/{timestamp}
+    events:
+      - http:
+          path: ingredient/{ingredient_id}/{timestamp}
+          method: delete
+          cors:
+            origin: "*"
+            headers: ${self:custom.allowedHeaders}
+  create-recipe:
+    handler: api/recipes/create_recipe.lambda_handler
+    description: POST /recipe
+    events:
+      - http:
+          path: recipe
+          method: post
+          cors:
+            origin: "*"
+            headers: ${self:custom.allowedHeaders}
+  update-recipe:
+    handler: api/recipes/update_recipe.lambda_handler
+    description: PATCH /recipe
+    events:
+      - http:
+          path: recipe
+          method: patch
+          cors:
+            origin: "*"
+            headers: ${self:custom.allowedHeaders}
+  get-recipes:
+    handler: api/recipes/get_recipes.lambda_handler
+    description: GET /recipes
+    events:
+      - http:
+          path: recipes
+          method: get
+          cors:
+            origin: "*"
+            headers: ${self:custom.allowedHeaders}
+  get-recipe:
+    handler: api/recipes/get_recipe.lambda_handler
+    description: GET /recipe/{recipe_id}
+    events:
+      - http:
+          path: recipe/{recipe_id}
+          method: get
+          cors:
+            origin: "*"
+            headers: ${self:custom.allowedHeaders}
+  get-random-recipe:
+    handler: api/recipes/get_random_recipe.lambda_handler
+    description: GET /recipe/random
+    events:
+      - http:
+          path: recipe/random
+          method: get
+          cors:
+            origin: "*"
+            headers: ${self:custom.allowedHeaders}
+  delete-recipe:
+    handler: api/recipes/delete_recipe.lambda_handler
+    description: DELETE /recipe/{recipe_id}
+    events:
+      - http:
+          path: recipe/{recipe_id}
+          method: delete
+          cors:
+            origin: "*"
+            headers: ${self:custom.allowedHeaders}
+
+resources:
+  Resources:
+    IngredientTable:
+      Type: AWS::DynamoDB::Table
+      DeletionPolicy: Retain
+      Properties:
+        TableName: ${self:provider.environment.INGREDIENT_TABLE}
+        AttributeDefinitions:
+          - AttributeName: ingredient_id
+            AttributeType: S
+          - AttributeName: timestamp
+            AttributeType: N
+          - AttributeName: is_active
+            AttributeType: S
+        KeySchema:
+          - AttributeName: ingredient_id
+            KeyType: HASH
+          - AttributeName: timestamp
+            KeyType: RANGE
+        ProvisionedThroughput:
+          ReadCapacityUnits: 1
+          WriteCapacityUnits: 1
+        GlobalSecondaryIndexes:
+          - IndexName: is_active-index
+            KeySchema:
+              - AttributeName: is_active
+                KeyType: HASH
+            Projection:
+              ProjectionType: ALL
+            ProvisionedThroughput:
+              ReadCapacityUnits: 1
+              WriteCapacityUnits: 1
+    RecipeTable:
+      Type: AWS::DynamoDB::Table
+      DeletionPolicy: Retain
+      Properties:
+        TableName: ${self:provider.environment.RECIPE_TABLE}
+        AttributeDefinitions:
+          - AttributeName: recipe_id
+            AttributeType: S
+          - AttributeName: timestamp
+            AttributeType: N
+          - AttributeName: is_active
+            AttributeType: S
+        KeySchema:
+          - AttributeName: recipe_id
+            KeyType: HASH
+          - AttributeName: timestamp
+            KeyType: RANGE
+        ProvisionedThroughput:
+          ReadCapacityUnits: 1
+          WriteCapacityUnits: 1
+        GlobalSecondaryIndexes:
+          - IndexName: is_active-index
+            KeySchema:
+              - AttributeName: is_active
+                KeyType: HASH
+            Projection:
+              ProjectionType: ALL
+            ProvisionedThroughput:
+              ReadCapacityUnits: 1
+              WriteCapacityUnits: 1
+    GatewayResponseDefault4XX:
+      Type: AWS::ApiGateway::GatewayResponse
+      Properties:
+        ResponseParameters:
+          gatewayresponse.header.Access-Control-Allow-Origin: "'*'"
+          gatewayresponse.header.Access-Control-Allow-Headers: "'*'"
+        ResponseType: DEFAULT_4XX
+        RestApiId:
+          Ref: "ApiGatewayRestApi"
