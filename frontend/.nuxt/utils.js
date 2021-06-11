@@ -200,7 +200,7 @@ export async function setContext (app, context) {
       payload: context.payload,
       error: context.error,
       base: app.router.options.base,
-      env: {"awsRegion":"sa-east-1","awsAccessKeyId":"AKIAYKP6CMZZREV3XIWQ","awsSecretAccessKey":"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","warehouseUrl":"https://qdqj07k5c5.execute-api.sa-east-1.amazonaws.com/dev","kitchenUrl":"https://fzfwniixbb.execute-api.sa-east-1.amazonaws.com/dev"}
+      env: {"awsRegion":"--YOUR-REGION--","awsAccessKeyId":"--YOUR-ACCESS-KEY-ID--","awsSecretAccessKey":"--YOUR-SECRET-KEY--","warehouseUrl":"https://qdqj07k5c5.execute-api.sa-east-1.amazonaws.com/dev","kitchenUrl":"https://fzfwniixbb.execute-api.sa-east-1.amazonaws.com/dev"}
     }
     // Only set once
 
